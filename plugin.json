@@ -1,0 +1,8 @@
+{
+    "author": "L0615T1C5.216AC#9437's cat",
+    "name": "BMI",
+    "description": "Checks if logic image code is banned",
+    "main": "base.Main",
+    "version": 1,
+    "minGameVersion": 139
+}
