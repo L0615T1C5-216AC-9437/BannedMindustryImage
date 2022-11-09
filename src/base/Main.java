@@ -23,6 +23,7 @@ import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -146,6 +147,8 @@ public class Main extends Plugin {
                                         Core.app.post(() -> hit(p, data));
                                     }
                                 }
+                            } catch (SocketTimeoutException ignored) {
+                                Log.err("BMI: &rHttp socket has timed out!&fr Consider increasing&lb ConnectionTimeout&fr in&lb bmiconfig&fr to allow more time for the socket to connect.");
                             }
                         } catch (IOException | URISyntaxException e) {
                             Log.err(e);
