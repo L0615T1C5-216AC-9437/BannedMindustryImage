@@ -10,6 +10,7 @@ import mindustry.game.EventType;
 import mindustry.gen.Call;
 import mindustry.gen.Player;
 import mindustry.mod.Plugin;
+import mindustry.net.Administration;
 import mindustry.world.blocks.logic.LogicBlock;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -58,8 +59,8 @@ public class Main extends Plugin {
             Log.warn("\n\n\nBMI: &rAPI key has not been configured. &frPlease go to discord.gg/v7SyYd2D3y and use the bot slash command to get an api key. Configure the api key using the \"bmiconfig ApiKey insertKeyHere\" command\n\n");
             return;
         }
-        HttpGet temp1 = new HttpGet(Vars.ghApi + "/repos/L0615T1C5-216AC-9437/AutomaticModUpdator/releases/latest");
-        HttpGet temp2 = new HttpGet("http://localhost:3249/bmi/v2/ping");
+        HttpGet temp1 = new HttpGet(Vars.ghApi + "/repos/L0615T1C5-216AC-9437/BannedMindustryImage/releases/latest");
+        HttpGet temp2 = new HttpGet("http://c-n.ddns.net:8888/bmi/v2/ping");
         temp2.addHeader("X-api-key", Config.ApiKey.string());
         try (CloseableHttpClient client = HttpClients.createDefault()) {
             try (CloseableHttpResponse response = client.execute(temp1)) {
@@ -95,7 +96,8 @@ public class Main extends Plugin {
         }
 
         Events.on(EventType.BlockBuildBeginEvent.class, event -> {
-            if (event.breaking || event.unit == null || event.unit.getPlayer() == null || Wait404 > System.currentTimeMillis()) return;
+            if (event.breaking || event.unit == null || event.unit.getPlayer() == null || Wait404 > System.currentTimeMillis())
+                return;
             final Player p = event.unit.getPlayer();
             if (event.tile.build instanceof final LogicBlock.LogicBuild lb) {
                 lb.configured(null, lb.config());
@@ -122,16 +124,22 @@ public class Main extends Plugin {
                                     }
                                     case 200 -> {
                                         //dev
-                                        Log.debug("BMI: Miss!");
-                                        for (var h : response.getAllHeaders()) System.out.println(h.getName() + ": " + h.getValue());
+                                        if (Administration.Config.debug.bool()) {
+                                            Log.debug("BMI: Miss!");
+                                            for (var h : response.getAllHeaders())
+                                                System.out.println(h.getName() + ": " + h.getValue());
+                                        }
                                     }
                                     case 302 -> {
                                         String responseBody = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
                                         final JSONObject data = new JSONObject(responseBody);
                                         //dev
-                                        Log.debug("BMI: Hit!");
-                                        for (var h : response.getAllHeaders()) System.out.println(h.getName() + ": " + h.getValue());
-                                        Log.debug(responseBody);
+                                        if (Administration.Config.debug.bool()) {
+                                            Log.debug("BMI: Hit!");
+                                            for (var h : response.getAllHeaders())
+                                                System.out.println(h.getName() + ": " + h.getValue());
+                                            Log.debug(responseBody);
+                                        }
 
                                         Core.app.post(() -> hit(p, data));
                                     }
