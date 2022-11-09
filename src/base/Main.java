@@ -12,10 +12,12 @@ import mindustry.gen.Player;
 import mindustry.mod.Plugin;
 import mindustry.net.Administration;
 import mindustry.world.blocks.logic.LogicBlock;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
@@ -80,10 +82,7 @@ public class Main extends Plugin {
             try (CloseableHttpResponse response = client.execute(temp2)) {
                 int code = response.getStatusLine().getStatusCode();
                 switch (code) {
-                    case 200 -> {
-                        Log.info("BMI: &gApi connection is OK&fr");
-
-                    }
+                    case 200 -> Log.info("BMI: &gApi connection is OK&fr");
                     case 400 -> {
                         Log.err("BMI: &rInvalid Api Key! \"&fr" + Config.ApiKey.string() + "&r\" is not a valid api key! &lbGo to discord.gg/v7SyYd2D3y to get a new api key.&fr");
                         return;
@@ -104,7 +103,10 @@ public class Main extends Plugin {
                 if (lb.code.contains("drawflush display") && isImageProc(lb.code)) {
                     final String[] check = Config.ComplexSearch.bool() ? lb.code.split("drawflush display.\n") : new String[]{lb.code};
                     executorService.execute(() -> {
-                        try (CloseableHttpClient client = HttpClients.createDefault()) {
+                        RequestConfig config = RequestConfig.custom().setConnectTimeout(Config.ConnectionTimeout.num()).setSocketTimeout(Config.ConnectionTimeout.num()).build();
+                        HttpClientBuilder hcb = HttpClientBuilder.create();
+                        hcb.setDefaultRequestConfig(config);
+                        try (CloseableHttpClient client = hcb.build()) {
                             var a = new URIBuilder(URI.create("http://c-n.ddns.net:8888/bmi/v2/check"));
                             var e = Base64.getEncoder();
                             //sha256, then encode to base 64
