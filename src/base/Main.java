@@ -85,7 +85,7 @@ public class Main extends Plugin {
                 switch (code) {
                     case 200 -> Log.info("BMI: &gApi connection is OK&fr");
                     case 400 -> {
-                        Log.err("BMI: &rInvalid Api Key! \"&fr" + Config.ApiKey.string() + "&r\" is not a valid api key! &lbGo to discord.gg/v7SyYd2D3y to get a new api key.&fr");
+                        Log.err("BMI: &rInvalid Api Key! \"&fr@&r\" is not a valid api key! &lbGo to discord.gg/v7SyYd2D3y to get a new api key.&fr", Config.ApiKey.string());
                         return;
                     }
                     case 404 -> Log.warn("BMI: &yBMI Api is offline!&fr");
@@ -113,7 +113,7 @@ public class Main extends Plugin {
                             //sha256, then encode to base 64
                             for (int i = 0, count = 0; i < check.length && count < 128; i++, count++)
                                 a.addParameter("hash", e.encodeToString(messageDigest.digest(check[i].getBytes(StandardCharsets.UTF_8))));
-                            Log.debug("BMI: Checking " + check.length + " hash(es)");
+                            Log.debug("BMI: Checking @ hash(es)", check.length);
                             //make get request
                             HttpGet get = new HttpGet(a.build());
                             get.addHeader("X-api-key", Config.ApiKey.string());
@@ -130,7 +130,7 @@ public class Main extends Plugin {
                                         if (Administration.Config.debug.bool()) {
                                             Log.debug("BMI: Miss!");
                                             for (var h : response.getAllHeaders())
-                                                System.out.println(h.getName() + ": " + h.getValue());
+                                                System.out.printf("%s: %s\n", h.getName(), h.getValue());
                                         }
                                     }
                                     case 302 -> {
@@ -140,7 +140,7 @@ public class Main extends Plugin {
                                         if (Administration.Config.debug.bool()) {
                                             Log.debug("BMI: Hit!");
                                             for (var h : response.getAllHeaders())
-                                                System.out.println(h.getName() + ": " + h.getValue());
+                                                System.out.printf("%s: %s\n", h.getName(), h.getValue());
                                             Log.debug(responseBody);
                                         }
 
@@ -211,17 +211,17 @@ public class Main extends Plugin {
             case UNKNOWN -> 3;
         }) {
             case 0 -> {
-                Log.info("&lbBanning &fr" + Strings.stripColors(p.name) + " &lbfor placing `&fr" + type.name() + "&lb` Banned Mindustry Image!&fr");
+                Log.info("&lbBanning&fr @&lb for placing `&fr@&lb` Banned Mindustry Image!&fr", Strings.stripColors(p.name), type.name());
                 Vars.netServer.admins.banPlayerID(p.con.uuid);
                 Vars.netServer.admins.banPlayerIP(p.con.address);
                 p.con.kick(Config.DisconnectMessage.string() + String.format(DisconnectMessageInfo, Integer.toHexString(data.getInt("bid")), Integer.toHexString(data.getInt("id"))), Config.KickDuration.num() * 60000L);
             }
             case 1 -> {
-                Log.info("&lbKicking &fr" + Strings.stripColors(p.name) + " &lbfor placing `&fr" + type.name() + "&lb` Banned Mindustry Image!&fr");
+                Log.info("&lbKicking&fr @&lb for placing `&fr@&lb` Banned Mindustry Image!&fr", Strings.stripColors(p.name), type.name());
                 p.con.kick(Config.DisconnectMessage.string() + String.format(DisconnectMessageInfo, Integer.toHexString(data.getInt("bid")), Integer.toHexString(data.getInt("id"))), Config.KickDuration.num() * 60000L);
             }
             case 2 -> {
-                Log.info("&lbDisconnecting &fr" + Strings.stripColors(p.name) + " &lbfor placing `&fr" + type.name() + "&lb` Banned Mindustry Image!&fr");
+                Log.info("&lbDisconnecting&fr @&lb for placing `&fr@&lb` Banned Mindustry Image!&fr", Strings.stripColors(p.name), type.name());
                 Call.kick(p.con, Config.DisconnectMessage.string() + String.format(DisconnectMessageInfo, Integer.toHexString(data.getInt("bid")), Integer.toHexString(data.getInt("id"))));
             }
             case 3 -> Log.debug("Ignored due to config.");
