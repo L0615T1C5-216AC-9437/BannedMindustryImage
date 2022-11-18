@@ -8,7 +8,7 @@ A mindustry plugin that checks if a image is banned. No more nsfw (hopefully)
 2) The api uses HTTP, not HTTPS, please refrain from attempting to access the api with https requests.
 
 ## Installation Guide
-1. Download the latest mod verion in [#Releases](https://github.com/L0615T1C5-216AC-9437/MaxRateCalculator/releases).  
+1. Download the latest mod verion in [#Releases](https://github.com/L0615T1C5-216AC-9437/BannedMindustryImage/releases).  
 2. Go to your server's directory \ config \ mods
 3. Move the mod (`Jar` file) into the mods folder  
 4. Restart the server.  
