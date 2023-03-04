@@ -24,23 +24,25 @@ The code is then hashed and sent to `http://c-n.ddns.net:8888` to see if the has
 ## Settings  
 These are the raw setting names for the `bmiconfig`.
 * `ApiKey` (String): Api Key to access BMI API. To get an API key go to discord.gg/v7SyYd2D3y and use the bot slash command.  
-* `NudityAction` (Int): 0 for Ban, 1 for Kick, 2 for Force Disconnect, 3 to Ignore.
+* `NudityAction` (Int): 0 for Ban, 1 for Kick, 2 for Force Disconnect, 3 to Ignore.  
 default: `1`
-* `BorderlineAction` (Int): 0 for Ban, 1 for Kick, 2 for Force Disconnect, 3 to Ignore.
+* `BorderlineAction` (Int): 0 for Ban, 1 for Kick, 2 for Force Disconnect, 3 to Ignore.  
 default: `1`
-* `FurryAction` (Int): 0 for Ban, 1 for Kick, 2 for Force Disconnect, 3 to Ignore.
+* `FurryAction` (Int): 0 for Ban, 1 for Kick, 2 for Force Disconnect, 3 to Ignore.  
 default: `3`
 * `ComplexSearch` (Boolean): If true, each drawflush will be checked individually.  
 default: `false`  
-* `DisconnectMessage` (String): What message to send when user is banned/kicked/disconnected. Identifier and BMI discord invite will still be sent.
+* `DisconnectMessage` (String): What message to send when user is banned/kicked/disconnected. Identifier and BMI discord invite will still be sent.  
 default: `[scarlet]Built banned logic image`  
-* `ConnectionTimeout` (Int): How long, in millis, the server will wait for a http response before giving up. 
+* `ConnectionTimeout` (Int): How long, in millis, the server will wait for a http response before giving up.  
 default: `1000`  
 *Note: `c-n.ddns.net` does not respond to pings.*  
 * `gib_KickDuration` (Int): How many minutes the player will kick be for.  
 default: `180`  
-* `HTTPThreadCount` (Int): Max # of threads to use for HTTP requests.
-default: 4
+* `HTTPThreadCount` (Int): Max # of threads to use for HTTP requests.  
+default: `4`  
+* `CacheTTL` (Int): How many minutes the cache will retain data for.  
+default: `5`  
 
 ## Commands  
 `bmiconfig`: Same as `config` but for GIB settings. Set value to `default` for default value.  
