@@ -2,6 +2,7 @@ package base;
 
 import arc.Core;
 import arc.Events;
+import arc.struct.ObjectMap;
 import arc.util.CommandHandler;
 import arc.util.Log;
 import arc.util.Strings;
@@ -30,12 +31,18 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Iterator;
+import java.util.Objects;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 public class Main extends Plugin {
     private static final String DisconnectMessageInfo = "\n[white]Hash Identifier: %s-%s\nIf you didn't place a banned mindustry image, join [sky]discord.gg/v7SyYd2D3y []and file a report.";
+    public static final int MaxHashPerQuery = 128;
+    public static final Base64.Encoder e = Base64.getEncoder();
 
     private static final ThreadPoolExecutor executorService = new ThreadPoolExecutor(0, Config.HTTPThreadCount.num(),
             5000L, TimeUnit.MILLISECONDS,
@@ -43,6 +50,19 @@ public class Main extends Plugin {
     private static final MessageDigest messageDigest;
 
     private static long Wait404 = System.currentTimeMillis();
+    private static long Wait429 = System.currentTimeMillis();
+
+    private static final ObjectMap<byte[], ApiCache> cache = new ObjectMap<>();
+
+    public record ApiCache(Type type, JSONObject json, long expiration) {
+        public boolean expired() {
+            return System.currentTimeMillis() < expiration;
+        }
+
+        public static long generateExpiration() {
+            return System.currentTimeMillis() + (Config.CacheTTL.num() * 60000L);
+        }
+    }
 
     static {
         try {
@@ -95,37 +115,63 @@ public class Main extends Plugin {
             Log.err(e);
         }
 
-        Events.on(EventType.BlockBuildBeginEvent.class, event -> {
-            if (event.breaking || event.unit == null || event.unit.getPlayer() == null || Wait404 > System.currentTimeMillis())
+        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+            if (removeIf(cache, e -> e.value.expired()))
+                Log.debug("BMI: Removed entries from cache");
+        }, 1, 1, TimeUnit.MINUTES);
+
+        Events.on(EventType.BlockBuildEndEvent.class, event -> {
+            if (event.breaking || event.unit == null || event.unit.getPlayer() == null || Wait404 > System.currentTimeMillis() || Wait429 > System.currentTimeMillis())
                 return;
             final Player p = event.unit.getPlayer();
             if (event.tile.build instanceof final LogicBlock.LogicBuild lb) {
                 lb.configured(null, lb.config());
                 if (lb.code.contains("drawflush display") && isImageProc(lb.code)) {
-                    final String[] check = Config.ComplexSearch.bool() ? lb.code.split("drawflush display.\n") : new String[]{lb.code};
+                    //split code if complex
+                    String[] check = Config.ComplexSearch.bool() ? lb.code.split("drawflush display.\n") : new String[]{lb.code};
+                    //hash each code block
+                    final byte[][] hashes = new byte[Math.min(check.length, MaxHashPerQuery)][];
+                    for (int i = 0; i < hashes.length; i++)
+                        hashes[i] = messageDigest.digest(check[i].getBytes(StandardCharsets.UTF_8));
+                    //check if any in cache
+                    for (byte[] hash : hashes) {
+                        var ac = cache.get(hash);
+                        if (ac != null) {
+                            //found in cache
+                            if (ac.type != null) {
+                                //hit
+                                int action = typeAction(ac.type);
+                                if (action != 3) {
+                                    //run if not ignored
+                                    Log.debug("BMI: Found @ in cache! action=@", e.encode(hash), action);
+                                    hit(p, ac.json);
+                                    return;//don't queue api
+                                }
+                            }//else not found aka safe
+                        }
+                    }
+                    //queue
                     executorService.execute(() -> {
                         RequestConfig config = RequestConfig.custom().setConnectTimeout(Config.ConnectionTimeout.num()).setSocketTimeout(Config.ConnectionTimeout.num()).build();
                         HttpClientBuilder hcb = HttpClientBuilder.create();
                         hcb.setDefaultRequestConfig(config);
                         try (CloseableHttpClient client = hcb.build()) {
                             var a = new URIBuilder(URI.create("http://c-n.ddns.net:8888/bmi/v2/check"));
-                            var e = Base64.getEncoder();
-                            //sha256, then encode to base 64
-                            for (int i = 0, count = 0; i < check.length && count < 128; i++, count++)
-                                a.addParameter("hash", e.encodeToString(messageDigest.digest(check[i].getBytes(StandardCharsets.UTF_8))));
-                            Log.debug("BMI: Checking @ hash(es)", check.length);
+                            //add hash as b64 param
+                            for (byte[] hash : hashes)
+                                a.addParameter("hash", e.encodeToString(hash));
                             //make get request
+                            Log.debug("BMI: Checking @ hash(es)", check.length);
                             HttpGet get = new HttpGet(a.build());
                             get.addHeader("X-api-key", Config.ApiKey.string());
                             //execute
                             try (CloseableHttpResponse response = client.execute(get)) {
                                 int code = response.getStatusLine().getStatusCode();
                                 switch (code) {
-                                    case 404 -> {
-                                        Log.err("BMI: &rFailed to connect to BMI api!&fr");
-                                        Wait404 = System.currentTimeMillis() + 300000L;
-                                    }
                                     case 200 -> {
+                                        //cache
+                                        for (byte[] hash : hashes)
+                                            cache.put(hash, new ApiCache(null, null, ApiCache.generateExpiration()));
                                         //dev
                                         if (Administration.Config.debug.bool()) {
                                             Log.debug("BMI: Miss!");
@@ -145,6 +191,14 @@ public class Main extends Plugin {
                                         }
 
                                         Core.app.post(() -> hit(p, data));
+                                    }
+                                    case 404 -> {
+                                        Log.err("BMI: &rFailed to connect to BMI api!&fr");
+                                        Wait404 = System.currentTimeMillis() + 300000L;
+                                    }
+                                    case 429 -> {
+                                        Log.warn("BMI: &yRateLimit hit!&fr");
+                                        Wait429 = System.currentTimeMillis() + 5000;
                                     }
                                 }
                             } catch (SocketTimeoutException ignored) {
@@ -202,26 +256,33 @@ public class Main extends Plugin {
         });
     }
 
-    private static void hit(Player p, JSONObject data) {
-        Type type = Type.valueOf(data.getString("type"));
-        switch (switch (type) {
+    private static int typeAction(Type t) {
+        return switch (t) {
             case NSFW -> Config.NudityAction.num();
             case BORDERLINE -> Config.BorderlineAction.num();
             case FURRY -> Config.FurryAction.num();
             case UNKNOWN -> 3;
-        }) {
+        };
+    }
+
+    private static void hit(Player p, JSONObject data) {
+        Type type = Type.valueOf(data.getString("type"));
+        //add to cache
+        cache.put(Base64.getDecoder().decode(data.getString("hash")), new ApiCache(type, data, ApiCache.generateExpiration()));
+        //act
+        switch (typeAction(type)) {
             case 0 -> {
-                Log.info("&lbBanning&fr @&lb for placing `&fr@&lb` Banned Mindustry Image!&fr", Strings.stripColors(p.name), type.name());
+                Log.warn("&lbBanning&fr @&lb for placing `&fr@&lb` Banned Mindustry Image!&fr", Strings.stripColors(p.name), type.name());
                 Vars.netServer.admins.banPlayerID(p.con.uuid);
                 Vars.netServer.admins.banPlayerIP(p.con.address);
                 p.con.kick(Config.DisconnectMessage.string() + String.format(DisconnectMessageInfo, Integer.toHexString(data.getInt("bid")), Integer.toHexString(data.getInt("id"))), Config.KickDuration.num() * 60000L);
             }
             case 1 -> {
-                Log.info("&lbKicking&fr @&lb for placing `&fr@&lb` Banned Mindustry Image!&fr", Strings.stripColors(p.name), type.name());
+                Log.warn("&lbKicking&fr @&lb for placing `&fr@&lb` Banned Mindustry Image!&fr", Strings.stripColors(p.name), type.name());
                 p.con.kick(Config.DisconnectMessage.string() + String.format(DisconnectMessageInfo, Integer.toHexString(data.getInt("bid")), Integer.toHexString(data.getInt("id"))), Config.KickDuration.num() * 60000L);
             }
             case 2 -> {
-                Log.info("&lbDisconnecting&fr @&lb for placing `&fr@&lb` Banned Mindustry Image!&fr", Strings.stripColors(p.name), type.name());
+                Log.warn("&lbDisconnecting&fr @&lb for placing `&fr@&lb` Banned Mindustry Image!&fr", Strings.stripColors(p.name), type.name());
                 Call.kick(p.con, Config.DisconnectMessage.string() + String.format(DisconnectMessageInfo, Integer.toHexString(data.getInt("bid")), Integer.toHexString(data.getInt("id"))));
             }
             case 3 -> Log.debug("Ignored due to config.");
@@ -235,5 +296,18 @@ public class Main extends Plugin {
             count++;
         }
         return count == 200;
+    }
+
+    public static <E> boolean removeIf(Iterable<E> map, Predicate<? super E> filter) {
+        Objects.requireNonNull(filter);
+        boolean removed = false;
+        final Iterator<E> each = map.iterator();
+        while (each.hasNext()) {
+            if (filter.test(each.next())) {
+                each.remove();
+                removed = true;
+            }
+        }
+        return removed;
     }
 }

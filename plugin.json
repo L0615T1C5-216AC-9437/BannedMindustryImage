@@ -4,5 +4,5 @@
     "description": "Checks if logic image code is banned",
     "main": "base.Main",
     "version": 1,
-    "minGameVersion": 139
+    "minGameVersion": 142
 }

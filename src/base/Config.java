@@ -11,7 +11,8 @@ public enum Config {
     DisconnectMessage("What message to send when user is banned/kicked/disconnected. Identifier and BMI discord invite will still be sent.", "[scarlet]Built banned logic image", "KickBanMessage"),
     ConnectionTimeout("How long, in millis, the server will wait for a http response before giving up.", 1000, "ConnectionTimeout"),
     KickDuration("How many minutes the player will kick be for.", 3 * 60, "KickDuration"),
-    HTTPThreadCount("How many threads used to send HTTP Get request to the api.", 4);
+    HTTPThreadCount("How many threads used to send HTTP Get request to the api.", 4),
+    CacheTTL("How long (in minutes) to keep cached responses from hash. Set to 0 to disable.", 5);
 
     public static final Config[] all = values();
 
