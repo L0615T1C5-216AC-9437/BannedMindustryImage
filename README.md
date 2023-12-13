@@ -1,3 +1,10 @@
+# This plugin has been superceeded. Check out No Horni 2 by Phinner
+ * **https://github.com/xpdustry/nohorny**  
+
+.  
+.  
+.  
+
 ![Discord](https://img.shields.io/discord/917595056075071488)
 [![Github All Releases](https://img.shields.io/github/downloads/L0615T1C5-216AC-9437/BannedMindustryImage/total.svg)]()
 # GlobalImageBan
